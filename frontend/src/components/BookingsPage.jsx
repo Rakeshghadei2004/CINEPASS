@@ -3,7 +3,7 @@ import { bookingsPageStyles, formatTime, formatDuration } from '../assets/dummyS
 import QRCode from 'qrcode';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Clock, Film, MapPin, QrCode } from 'lucide-react';
+import { ChevronDown, Clock, Film, MapPin, QrCode, X } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000';
 

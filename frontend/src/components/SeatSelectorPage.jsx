@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import QRCode from "qrcode";
+import RewardPopup from "../components/RewardPopup";
 import {
   ArrowLeft,
   Sofa,
@@ -69,6 +71,9 @@ const sameMinute = (a, b) => {
   return da.getTime() === db.getTime();
 };
 
+
+
+
 /* component */
 export default function SeatSelectorPage() {
   const { id, slot } = useParams();
@@ -82,6 +87,17 @@ export default function SeatSelectorPage() {
   const [selected, setSelected] = useState(new Set());
   const [bookingLoading, setBookingLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getStoredToken()));
+
+  const [rewardPopup, setRewardPopup] = useState(false);
+const [rewardQR, setRewardQR] = useState("");
+const [rewardTriggered, setRewardTriggered] = useState(false);
+const [expiryDate, setExpiryDate] = useState("");
+
+useEffect(() => {
+  if (selected.size === 5 && !rewardTriggered) {
+    handleReward();
+  }
+}, [selected, rewardTriggered]);
 
   useEffect(() => {
     const onStorage = () => setIsLoggedIn(Boolean(getStoredToken()));
@@ -124,6 +140,35 @@ export default function SeatSelectorPage() {
       mounted = false;
     };
   }, [movieIdParam]);
+
+
+  const handleReward = async () => {
+  try {
+    const showDate = new Date(
+      slotObj && slotObj._iso ? slotObj._iso : slotKey
+    );
+
+    const formattedDate = showDate.toLocaleDateString("en-IN");
+
+    const qrData = JSON.stringify({
+      reward: "FREE_POPCORN_COKE",
+      seats: Array.from(selected),
+      validTill: formattedDate,
+      movie: movie?.title || "",
+      audi: audiName,
+      time: showDate.toISOString(),
+    });
+
+    const qrImage = await QRCode.toDataURL(qrData);
+
+    setRewardQR(qrImage);
+    setExpiryDate(formattedDate); // ✅ correct
+    setRewardPopup(true);
+    setRewardTriggered(true);
+  } catch (err) {
+    console.error("QR Error:", err);
+  }
+};
 
   /* slots resolution */
   const slotsSource = useMemo(() => {
@@ -828,6 +873,80 @@ export default function SeatSelectorPage() {
           </div>
         </div>
       </div>
+      {rewardPopup && rewardQR && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      background: "rgba(0,0,0,0.7)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 9999,
+    }}
+  >
+    <div
+  style={{
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "10px",
+    textAlign: "center",
+    maxWidth: "300px",
+    color: "#000", // ✅ FIX: force visible text
+  }}
+>
+      <h2>🎉 Congratulations!</h2>
+      <p>You unlocked FREE Popcorn & Cold Drink</p>
+
+      <img src={rewardQR} alt="QR Code" style={{ width: "200px" }} />
+
+      <p style={{ fontSize: "13px", marginTop: "10px" }}>
+        Valid till: <b>{expiryDate || "N/A"}</b>
+      </p>
+
+     <button
+  onClick={() => {
+    if (!rewardQR) return;
+    const link = document.createElement("a");
+    link.href = rewardQR;
+    link.download = "reward-qr.png";
+    link.click();
+  }}
+  style={{
+    marginTop: "10px",
+    padding: "8px 12px",
+    background: "#007bff",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  }}
+>
+  Download QR
+</button>
+
+      <br />
+
+     <button
+  onClick={() => setRewardPopup(false)}
+  style={{
+    marginTop: "10px",
+    padding: "8px 12px",
+    background: "#dc3545",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  }}
+>
+  Close
+</button>
+    </div>
+  </div>
+)}
     </div>
   );
 }
